@@ -6,7 +6,7 @@
 
 Mobilde dikey modda oynanan, tarayıcıda çalışan **metin tabanlı roguelike**. Piksel kahramanınla zindanda otomatik savaş izle, boss'ları yen, eşya topla, karakterini geliştir.
 
-**🎮 Oyna:** `https://koraypy.github.io/zindan-ruhu/`
+**🎮 Oyna:** `https://<kullanici-adi>.github.io/zindan-ruhu/`
 
 > English: A mobile-first, text-based roguelike with an auto-battling pixel hero, endless dungeon floors, boss fights every 10 floors, loot rarities, a blacksmith, a merchant and a (demo) store. Pure HTML/CSS/JS, zero dependencies.
 
