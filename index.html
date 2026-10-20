@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zindan Ruhu</title>
+<style>
+:root{--bg:#0f1117;--p:#1a1d27;--b:#2c3142;--t:#e8e6e3;--m:#8b90a0;--ac:#f59e0b;--hp:#ef4444;--xp:#38bdf8;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--t);font:15px/1.4 ui-monospace,Menlo,Consolas,monospace}
+#app{max-width:480px;margin:0 auto;height:100%;display:flex;flex-direction:column;padding:8px;gap:8px}
+#hud{background:var(--p);border:1px solid var(--b);border-radius:10px;padding:8px}
+#v{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+#ad{border:1px dashed var(--b);border-radius:8px;padding:6px;text-align:center;font-size:12px;color:var(--m);background:#0006}
+.r{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.bar{position:relative;height:16px;background:#0008;border-radius:6px;margin-top:5px;overflow:hidden}
+.bar i{position:absolute;inset:0 auto 0 0}.bar em{position:absolute;inset:0;font:11px/16px monospace;text-align:center;font-style:normal}
+button{position:relative;overflow:hidden;font:inherit;color:var(--t);background:var(--p);border:1px solid #f59e0b99;border-radius:10px;padding:14px 10px;min-height:48px;cursor:pointer;transition:transform .1s,opacity .4s,filter .4s}
+button:not(:disabled){animation:glow 2.2s ease-in-out infinite}
+button:not(:disabled)::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,#ffffff30,transparent);transform:skewX(-20deg);animation:shine 2.8s infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 3px #f59e0b33}50%{box-shadow:0 0 14px #f59e0bcc}}
+@keyframes shine{0%{left:-60%}60%,100%{left:140%}}
+button:active:not(:disabled){transform:scale(.95)}
+button:disabled,button.off{opacity:.35;filter:grayscale(1);animation:none;box-shadow:none;border-color:var(--b)}
+button.off::after,button:disabled::after{display:none}
+button.pri{background:var(--ac);color:#111;border-color:var(--ac);font-weight:700}
+button.sm{padding:6px 10px;min-height:36px}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.card{background:var(--p);border:1px solid var(--b);border-radius:10px;padding:10px}
+h1{margin:12px 0 0;text-align:center;font-size:30px;color:var(--ac);letter-spacing:2px}
+h2{margin:4px 0;font-size:17px;color:var(--ac)}
+.m{color:var(--m);font-size:13px}.c{text-align:center}
+.coin{display:inline-block;width:.85em;height:.85em;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fde047,#eab308 60%,#a16207);border:1px solid #854d0e;vertical-align:-1px}
+.gem{display:inline-block;width:.7em;height:.7em;background:linear-gradient(135deg,#a5f3fc,#22d3ee 50%,#0891b2);transform:rotate(45deg);margin:0 .15em;border:1px solid #0e7490}
+canvas{width:100%;image-rendering:pixelated;border:1px solid var(--b);border-radius:10px;background:#000;display:block}
+#log{background:#000a;border-radius:8px;padding:8px;font-size:12px;min-height:106px;color:#cbd5e1}
+input{font:inherit;width:100%;padding:12px;border-radius:10px;border:1px solid var(--b);background:var(--p);color:var(--t)}
+table{width:100%;border-collapse:collapse}td,th{padding:6px 4px;border-bottom:1px solid var(--b);text-align:left}
+#fade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .26s;z-index:50}
+#ov{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;padding:16px;z-index:30}
+</style></head><body><div id="app"><div id="hud" style="display:none"></div><div id="v"></div><div id="ad" onclick="openStore()">📢 REKLAM · Ejderha Savaşı’nı şimdi oyna! <u>Reklamı kaldır</u></div></div><div id="ov"></div><div id="fade"></div>
+<script>
+const $=s=>document.querySelector(s),R=Math.random,ri=(a,b)=>a+Math.floor(R()*(b-a+1));
+const CI='<i class=coin></i>',GI='<i class=gem></i>';
+const SETS=[{n:'Demir',wb:6,ab:2},{n:'Çelik',wb:22,ab:7},{n:'Ejder',wb:70,ab:22}];
+const RAR=[{n:'Sıradan',m:1,c:'#9ca3af'},{n:'Nadir',m:1.6,c:'#60a5fa'},{n:'Destansı',m:2.6,c:'#c084fc'},{n:'Efsanevi',m:4.2,c:'#fbbf24'}];
+const SK=[['Yıkıcı Darbe','+%8 hasar'],['Demir Deri','-%5 alınan hasar'],['Yağmacı','+%10 altın ve EXP']];
+const SP={hero:["...HHHH.....","..HHHHHH..w.","..HhhkhH..w.","...hhhh...w.","..bbbbbb..w.",".sbbbbbb..w.","ssbbbbbbhggg",".sbbbbbb..h.","..bbbbbb..g.","...bb.bb....","...ll.ll....","..lll.lll..."],
+slime:["............","............","....cccc....","...cccccc...","..cccccccc..","..cwkccwkc..",".cccccccccc.",".cccckkcccc.","cccccccccccc","cccccccccccc",".cccccccccc.","..cccccccc.."],
+bat:["............","..c......c..",".cc.cccc.cc.","cccccccccccc","cccceccecccc",".cccccccccc.","..c.cccc.c..","....cwwc....","............","............","............","............"],
+skel:["...cccccc...","..cccccccc..","..ckkcckkc..","..cccccccc..","...cckkcc...","....cccc....",".cccccccccc.","cc.cckkcc.cc","c..cccccc..c","...cc..cc...","...cc..cc...","..ccc..ccc.."],
+boss:["cc........cc","ccc.cccc.ccc",".cccccccccc.",".cewccccwec.",".cccccccccc.",".cckwwwwkcc.","..cccccccc..",".cccccccccc.","cccccccccccc","ccc.cccc.ccc","cc..cccc..cc","cc..cc..cc.."]};
+const BN=['Kemik Kral','Balçık Efendisi','Gece Yarasası','Ateş Cini'],EN=['Balçık','Yarasa','İskelet'],PF=['','Gölge ','Kızıl ','Antik '];
+const TN=['Basit','Gelişmiş','Efsanevi'],TC=['#9ca3af','#60a5fa','#fbbf24'];
+const MK={hp:{n:'Şifa İksiri',d:t=>`Canın %${[40,70,100][t]} dolar`,p:[60,170,420],v:[.4,.7,1]},
+xp:{n:'EXP Tılsımı',d:t=>`+%${[50,100,200][t]} EXP · 20 düşman`,p:[90,240,600],v:[.5,1,2]},
+gold:{n:'Altın Tılsımı',d:t=>`+%${[50,100,200][t]} altın · 20 düşman`,p:[90,240,600],v:[.5,1,2]},
+atk:{n:'Güç Tılsımı',d:t=>`+%${[25,50,100][t]} saldırı · 20 düşman`,p:[100,260,650],v:[.25,.5,1]},
+shd:{n:'Kalkan Tılsımı',d:t=>`-%${[25,40,60][t]} hasar · 20 düşman`,p:[100,260,650],v:[.25,.4,.6]},
+mhp:{n:'Can Tılsımı',d:t=>`+%${[30,60,120][t]} maks HP · 20 düşman`,p:[100,260,650],v:[.3,.6,1.2]},
+box:{n:'Eşya Paketi',d:t=>`1 eşya · en az ${RAR[t+1].n}`,p:[400,1400,4000]},
+rev:{n:'Diriliş Muskası',d:t=>`Ölünce %${[50,75,100][t]} canla dirilirsin`,g:[8,12,18],v:[.5,.75,1]},
+xpb:{n:'EXP Eliksiri',d:t=>`Anında %${[60,150,300][t]} seviye EXP’i`,g:[6,12,24],v:[.6,1.5,3]},
+chest:{n:'Efsane Sandık',d:t=>`1 eşya · en az ${RAR[t?3:2].n}`,g:[14,22,35]}};
+const STORE=[{id:'g1',n:'💎 99 Elmas',d:'Başlangıç paketi',tl:100,g:99},{id:'g2',n:'💎 199 Elmas',d:'Popüler paket',tl:190,g:199},{id:'g3',n:'💎 1999 Elmas',d:'Mega paket · en iyi değer',tl:1800,g:1999},
+{id:'vip',n:'👑 VIP Üyelik',d:'Ücretsiz dinlenme + oto kat atlama + hızlandırma',tl:300},{id:'pass',n:'🎫 Savaş Bileti (Battle Pass)',d:'Sezon 1 · +%25 EXP ve altın · +30 elmas',tl:250},
+{id:'noAds',n:'🚫 Reklam Kaldırma',d:'Tüm reklamlar kalkar',tl:120},{id:'auto',n:'⏩ Otomatik Kat Atlama',d:'Kat bitince otomatik üst kata geç',tl:150},{id:'speed',n:'⚡ Oyun Hızlandırma',d:'Savaşı 2x ve 3x hızda oyna',tl:150}];
+let S=null,LB=[],cfg={spd:1},scene='menu',back='menu',busy=0,tm=0,raf=0,E=null,F={k:0,need:3},LG=[],MSG='',cd=0,anim={hl:0,el:0,fl:0},fx=[];
+const ld=k=>{try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}};
+const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+function save(){if(S)sv('rg_save',S);sv('rg_lb',LB);sv('rg_cfg',cfg)}
+LB=ld('rg_lb')||[];cfg=ld('rg_cfg')||cfg;
+const dflt=x=>Object.assign({gems:0,own:{},bag:[],buf:{},shop:null},x);
+const has=k=>!!(S&&(S.own[k]||(S.own.vip&&(k=='auto'||k=='speed')))),spd=()=>has('speed')?cfg.spd:1,bf=k=>S.buf[k]?S.buf[k].v:0;
+const need=()=>Math.round(25*Math.pow(S.lv,1.5)),maxhp=()=>Math.round((30+S.vit*8)*(1+bf('mhp')));
+const itm=id=>S.inv.find(i=>i.id==id),eff=i=>Math.round(i.p*(1+.15*i.u));
+const atk=()=>(3+S.str*2+(S.w&&itm(S.w)?eff(itm(S.w)):0))*(1+.08*S.sk[0])*(1+bf('atk')),def=()=>S.a&&itm(S.a)?eff(itm(S.a)):0;
+const crit=()=>Math.min(.6,.03+S.agi*.01),nm=i=>`<span style="color:${RAR[i.r].c}">[${RAR[i.r].n}] ${SETS[i.s].n} ${i.t=='w'?'Kılıç':'Zırh'}${i.u?' +'+i.u:''}</span>`;
+const price=i=>Math.round(i.p*(i.r+1)*1.5)+2+i.u*i.p,upc=i=>Math.round(i.p*(i.u+1)*2.5)+20,restCost=()=>S.own.vip?0:15+S.lv*10;
+function log(s){LG.push(s);if(LG.length>6)LG.shift();const e=$('#log');if(e)e.innerHTML=LG.join('<br>')}
+function modal(h){const o=$('#ov');o.innerHTML=`<div class=card style="width:100%;max-width:400px;display:flex;flex-direction:column;gap:8px;max-height:90%;overflow:auto">${h}</div>`;o.style.display='flex'}
+const closeM=()=>{$('#ov').style.display='none'};
+function lock(n){modal(`<h2>🔒 ${n}</h2><div class=m>Bu özellik Mağaza’da satılıyor (VIP üyelik tüm kilitleri açar).</div><button class=pri onclick="go('store')">Mağazaya Git</button><button onclick="closeM()">Kapat</button>`)}
+function newGame(){const n=($('#nm').value||'Kahraman').replace(/[<>&"'`]/g,'').slice(0,12)||'Kahraman';
+ S=dflt({name:n,lv:1,xp:0,pts:0,sp:0,str:3,vit:3,agi:3,coins:0,floor:1,best:1,inv:[],w:null,a:null,sk:[0,0,0],nid:1,auto:true,hp:0});S.hp=maxhp();MSG='Kasabaya hoş geldin, '+n+'!';go('town')}
+function cont(){const x=ld('rg_save');if(!x)return;S=dflt(x);MSG='Tekrar hoş geldin!';go('town')}
+function openStore(){if(!S){const x=ld('rg_save');if(x)S=dflt(x)}if(!S){modal('<h2>🛒 Mağaza</h2><div class=m>Önce bir oyun başlat, sonra alışveriş yapabilirsin.</div><button onclick="closeM()">Tamam</button>');return}go('store')}
+function rec(){let e=LB.find(x=>x.n==S.name);if(!e)LB.push({n:S.name,f:S.best,l:S.lv});else if(S.best>=e.f){e.f=S.best;e.l=S.lv}LB.sort((a,b)=>b.f-a.f||b.l-a.l);LB=LB.slice(0,20)}
+function go(s){if(busy)return;busy=1;closeM();const f=$('#fade');f.style.pointerEvents='auto';f.style.opacity=1;
+ setTimeout(()=>{_go(s);f.style.opacity=0;setTimeout(()=>{f.style.pointerEvents='none';busy=0},270)},270)}
+function _go(s){if(s=='store'&&scene!='store')back=scene;scene=s;clearInterval(tm);cancelAnimationFrame(raf);if(S&&!['menu','start'].includes(s)){rec();save()}render();
+ if(s=='dungeon'){newFloor();tm=setInterval(tick,700/spd());draw()}}
+const bar=(v,m,c,l)=>`<div class=bar><i style="width:${Math.max(0,Math.min(100,v/m*100))}%;background:${c}"></i><em>${l} ${Math.ceil(v)}/${m}</em></div>`;
+function hud(){const h=$('#hud');if(!S||['menu','start','set'].includes(scene)){h.style.display='none';return}
+ h.style.display='block';h.innerHTML=`<div class=r><b>${S.name} · Sv ${S.lv}</b><span onclick="if(scene!='dungeon'&&scene!='store')go('store')">${CI} ${S.coins} &nbsp;${GI} ${S.gems}</span></div>${bar(S.hp,maxhp(),'var(--hp)','HP')}${bar(S.xp,need(),'var(--xp)','XP')}`}
+const bagHtml=()=>S.bag.length?S.bag.map((x,i)=>`<div class=r><span style="color:${TC[x.t]}">${MK[x.k].n} <span class=m>(${TN[x.t]})</span><br><span class=m>${MK[x.k].d(x.t)}</span></span><button class=sm ${x.k=='rev'?'disabled':''} onclick="useItem(${i})">${x.k=='rev'?'Otomatik':'Kullan'}</button></div>`).join(''):'<p class="m c">Çantada eşya yok. Tüccara uğra!</p>';
+function render(){const v=$('#v');let h='';hud();$('#ad').style.display=(scene=='dungeon'||scene=='store'||(S&&S.own.noAds))?'none':'block';
+ if(scene=='shop'&&!S.shop)genShop();
+ if(scene=='menu')h=`<h1>⚔️<br>ZİNDAN RUHU</h1><p class="c m">Metin tabanlı roguelike</p><button class=pri onclick="go('start')">Başla</button><button onclick="go('lb')">Skor Tablosu</button><button onclick="go('set')">Ayarlar</button><button onclick="openStore()">🛒 Mağaza</button>`;
+ else if(scene=='start')h=`<h2>Başla</h2>${ld('rg_save')?`<button class=pri onclick="cont()">Devam Et (${ld('rg_save').name} · Sv ${ld('rg_save').lv})</button>`:''}<div class=card><div class=m>Yeni oyun için isim gir (eski kayıt silinir)</div><input id=nm maxlength=12 placeholder="Kahraman"><br><br><button class=pri style="width:100%" onclick="newGame()">Yeni Oyun</button></div><button onclick="go('menu')">← Geri</button>`;
+ else if(scene=='set')h=`<h2>Ayarlar</h2><div class=card><div class=m>Savaş hızı (Mağaza özelliği)</div><div class=g style="grid-template-columns:repeat(3,1fr)">${[1,2,3].map(x=>`<button class="${cfg.spd==x?'':'off'}" onclick="setSpd(${x})">${x>1&&!has('speed')?'🔒 ':''}${x}x</button>`).join('')}</div></div><button onclick="if(confirm('Kayıt silinsin mi?')){try{localStorage.removeItem('rg_save')}catch(e){}S=null;render()}">Kaydı Sil</button><div class="card m">Krediler: Zindan Ruhu — Claude ile yapıldı. Sprite’lar kodla çizilir.</div><button onclick="go('menu')">← Geri</button>`;
+ else if(scene=='town'){const vip=S.own.vip,rc=restCost();h=`<h2>🏘️ Kasaba</h2><div class="card m">${MSG||'Huzurlu bir kasaba.'}</div><div class=g><button class=pri onclick="go('dungeon')">🕳️ Zindan<br><span class=m>Kat ${S.floor}</span></button><button onclick="go('smith')">🔨 Demirci</button><button onclick="go('shop')">🧙 Tüccar</button><button onclick="go('inv')">🎒 Envanter<br><span class=m>${S.inv.length} eşya · ${S.bag.length} çanta</span></button><button onclick="go('char')">📜 Karakter${S.pts||S.sp?' ❗':''}</button><button ${S.hp>=maxhp()||S.coins<rc?'disabled':''} onclick="rest()">👑 Dinlen<br><span class=m>${vip?'VIP · ücretsiz':CI+' '+rc}</span></button><button onclick="go('store')">🛒 Mağaza</button><button onclick="save();MSG='💾 Oyun kaydedildi.';render()">💾 Kaydet</button><button onclick="go('lb')">🏆 Skorlar</button><button onclick="save();go('menu')">🏠 Ana Menü</button></div>`}
+ else if(scene=='dungeon')h=`<canvas id=cv width=320 height=180></canvas><div class="r m"><span id=info></span><span>Kat ${S.floor}/${S.best}</span></div><div id=log></div><div class=g><button id=pw class=pri onclick="power()">💥 Güç Vuruşu</button><button id=bg onclick="openBag()"></button><button id=sp onclick="cyc()"></button><button id=au onclick="tgl()"></button><button id=dn onclick="fl(-1)">◀ Alt kat</button><button id=up onclick="fl(1)">Üst kat ▶</button></div><button onclick="go('town')">🏘️ Kasabaya Dön</button>`;
+ else if(scene=='inv'){const L=[...S.inv].sort((a,b)=>b.r-a.r||b.s-a.s||b.p-a.p);h=`<h2>🧪 Çanta</h2><div class=card>${bagHtml()}</div><h2>🎒 Eşyalar</h2>`+(L.length?L.map(i=>{const e=S.w==i.id||S.a==i.id;return `<div class=card><div class=r><div>${nm(i)}<br><span class=m>${i.t=='w'?'⚔️ Saldırı':'🛡️ Defans'} ${eff(i)} ${e?'· <b style="color:var(--ac)">Kuşanılı</b>':''}</span></div><div style="display:flex;gap:6px"><button class=sm onclick="eq(${i.id})">${e?'Çıkar':'Kuşan'}</button>${e?'':`<button class=sm onclick="sell(${i.id})">${CI}${price(i)}</button>`}</div></div></div>`}).join(''):'<p class="m c">Eşya yok. Zindanda düşür!</p>')+`<button onclick="go('town')">← Kasaba</button>`}
+ else if(scene=='smith'){const sl=(k,t)=>{const i=S[k]&&itm(S[k]);if(!i)return `<div class=card><b>${t}</b><br><span class=m>Kuşanılmış eşya yok.</span></div>`;const c=upc(i),g=(i.u+1)*2;return `<div class=card><b>${t}</b><br>${nm(i)} · ${eff(i)}<div class=g style="margin-top:6px"><button ${i.u>=10||S.coins<c?'disabled':''} onclick="upg(${i.id},0)">${i.u>=10?'Altın MAX':'Yükselt '+CI+' '+c}</button><button ${i.u>=15||S.gems<g?'disabled':''} onclick="upg(${i.id},1)">${i.u>=15?'MAX':'Elmas '+GI+' '+g}</button></div></div>`};
+ h=`<h2>🔨 Demirci</h2>${sl('w','Kılıç')}${sl('a','Zırh')}<div class="card m">Elmas: altın gerekmez, +15’e kadar yükseltir.</div><div class=card><b>Toplu Sat</b> <span class=m>(kuşanılmayanlar)</span><div class=g style="margin-top:6px">${RAR.map((r,i)=>`<button class=sm style="color:${r.c}" onclick="bulk(${i})">${r.n}</button>`).join('')}</div></div><div class="m c">${MSG}</div><button onclick="MSG='';go('town')">← Kasaba</button>`}
+ else if(scene=='shop')h=`<h2>🧙 Tüccar</h2><div class="card m">“Basit mallar, yüksek fiyat… ama hayat kurtarır.” Zindanda ilerledikçe daha güçlü mallar çıkar.${MSG?'<br><b style="color:var(--ac)">'+MSG+'</b>':''}</div><div class=g>${S.shop.map((o,i)=>`<div class=card style="border-color:${TC[o.t]}88"><b style="color:${TC[o.t]}">${MK[o.k].n}</b><div class=m style="min-height:56px">${TN[o.t]} · ${MK[o.k].d(o.t)}</div><button style="width:100%" ${o.sold||(o.c=='c'?S.coins:S.gems)<o.pr?'disabled':''} onclick="buyM(${i})">${o.sold?'Satıldı':(o.c=='c'?CI:GI)+' '+o.pr}</button></div>`).join('')}</div><button ${S.gems<10?'disabled':''} onclick="reroll()">🔄 Marketi Yenile · ${GI} 10</button><button onclick="MSG='';go('town')">← Kasaba</button>`;
+ else if(scene=='store')h=`<h2>🛒 Mağaza</h2><div class="card m">Gerçek para bölümü · <b>DEMO</b>: ödeme alınmaz.${MSG?'<br><b style="color:var(--ac)">'+MSG+'</b>':''}</div>${STORE.map(p=>{const o=!p.g&&S.own[p.id];return `<div class=card><div class=r><b>${p.n}</b></div><div class=m>${p.d}</div><button class=pri style="width:100%;margin-top:6px" ${o?'disabled':''} onclick="pay('${p.id}')">${o?'✔ Sahipsin':'₺'+p.tl.toLocaleString('tr-TR')}</button></div>`}).join('')}<button onclick="MSG='';go(back=='store'?'town':back)">← Geri</button>`;
+ else if(scene=='char'){const row=(l,k)=>`<div class=r><span>${l}: <b>${S[k]}</b></span><button class=sm ${S.pts?'':'disabled'} onclick="S.${k}++;S.pts--;render()">+</button></div>`;
+ h=`<h2>📜 Karakter</h2><div class=card><div class=m>Stat puanı: ${S.pts}</div>${row('💪 Güç (saldırı)','str')}${row('❤️ Can (HP)','vit')}${row('🎯 Çeviklik (kritik)','agi')}</div><div class=card><div class=m>Yetenek puanı: ${S.sp}</div>${SK.map((s,i)=>`<div class=r><span>${s[0]} <b>${S.sk[i]}/10</b><br><span class=m>${s[1]}</span></span><button class=sm ${S.sp&&S.sk[i]<10?'':'disabled'} onclick="S.sk[${i}]++;S.sp--;render()">+</button></div>`).join('')}</div><div class="card m">Saldırı ${atk().toFixed(0)} · Defans ${def()} · HP ${maxhp()} · Kritik %${(crit()*100).toFixed(0)}</div><button onclick="go('town')">← Kasaba</button>`}
+ else if(scene=='lb')h=`<h2>🏆 Skor Tablosu</h2><div class=card><table><tr><th>#</th><th>İsim</th><th>Kat</th><th>Sv</th></tr>${LB.length?LB.slice(0,10).map((e,i)=>`<tr${S&&e.n==S.name?' style="color:var(--ac)"':''}><td>${i+1}</td><td>${e.n}</td><td>${e.f}</td><td>${e.l}</td></tr>`).join(''):'<tr><td colspan=4 class=m>Henüz kayıt yok.</td></tr>'}</table></div><button onclick="go(S?'town':'menu')">← Geri</button>`;
+ v.innerHTML=h;if(scene=='dungeon')render2()}
+function render2(){if(!$('#au'))return;const nmz={xp:'EXP',gold:'Altın',atk:'Güç',shd:'Kalkan',mhp:'Can'},bs=Object.keys(S.buf).map(k=>`${nmz[k]}(${S.buf[k].n})`).join(' ');
+ $('#info').textContent=`Düşman ${Math.min(F.k+1,F.need)}/${F.need}${bs?' · ⚡'+bs:''}`;
+ const A=S.auto&&has('auto'),hs=has('speed');$('#au').className=A?'':'off';$('#au').textContent=(has('auto')?'':'🔒 ')+'Oto kat: '+(A?'AÇIK':'KAPALI');
+ $('#sp').className=hs&&cfg.spd>1?'':'off';$('#sp').textContent=(hs?'':'🔒 ')+'⏩ Hız '+spd()+'x';
+ $('#bg').textContent=`🎒 Çanta (${S.bag.length})`;$('#pw').textContent=cd>0?`💥 Bekle (${cd})`:'💥 Güç Vuruşu';$('#pw').disabled=cd>0||!E;
+ $('#dn').disabled=S.floor<=1;$('#up').disabled=S.floor>=S.best;$('#log').innerHTML=LG.join('<br>');hud()}
+const openBag=()=>{modal(`<h2>🎒 Çanta</h2>${bagHtml()}<button onclick="closeM()">Kapat</button>`)};
+function useItem(i){const x=S.bag[i],m=MK[x.k];if(x.k=='hp'){if(S.hp>=maxhp())return;S.hp=Math.min(maxhp(),S.hp+Math.round(maxhp()*m.v[x.t]))}else S.buf[x.k]={v:m.v[x.t],n:20};
+ S.bag.splice(i,1);log('🧪 '+m.n+' kullanıldı');scene=='dungeon'?(openBag(),render2()):render();hud()}
+function setSpd(x){if(x>1&&!has('speed'))return lock('Oyun Hızlandırma');cfg.spd=x;save();render()}
+function cyc(){if(!has('speed'))return lock('Oyun Hızlandırma');cfg.spd=cfg.spd%3+1;save();clearInterval(tm);tm=setInterval(tick,700/spd());render2()}
+function tgl(){if(!has('auto'))return lock('Otomatik Kat Atlama');S.auto=!S.auto;render2()}
+function rest(){const c=restCost();if(c){if(S.coins<c)return;S.coins-=c}S.hp=maxhp();MSG='😴 Dinlendin, canın doldu.';render()}
+function eq(id){const i=itm(id),k=i.t;S[k]=S[k]==id?null:id;render()}
+function sell(id){const i=itm(id);S.coins+=price(i);S.inv=S.inv.filter(x=>x.id!=id);render()}
+function bulk(r){let n=0,g=0;S.inv=S.inv.filter(i=>{if(i.r==r&&S.w!=i.id&&S.a!=i.id){n++;g+=price(i);return false}return true});S.coins+=g;MSG=`${n} eşya satıldı (+${g} altın)`;render()}
+function upg(id,g){const i=itm(id);if(g){const c=(i.u+1)*2;if(S.gems>=c&&i.u<15){S.gems-=c;i.u++;MSG='💎 Eşya güçlendi!'}}else{const c=upc(i);if(S.coins>=c&&i.u<10){S.coins-=c;i.u++;MSG='🔨 Eşya güçlendi!'}}render()}
+function pay(id){const p=STORE.find(x=>x.id==id);modal(`<h2>Satın Al</h2><div>${p.n} — <b>₺${p.tl.toLocaleString('tr-TR')}</b></div><div class=m>DEMO: gerçek ödeme alınmaz, ürün test için hesabına eklenir.</div><button class=pri onclick="paid('${id}')">Öde (demo)</button><button onclick="closeM()">Vazgeç</button>`)}
+function paid(id){const p=STORE.find(x=>x.id==id);if(p.g)S.gems+=p.g;else S.own[id]=1;if(id=='pass')S.gems+=30;MSG='✅ Satın alındı: '+p.n;closeM();save();render()}
+function genShop(){const tier=()=>{const x=R()+S.best*.008;return x>1.15?2:x>.8?1:0},ck=['xp','gold','atk','shd','mhp','box','hp'],L=[];
+ for(let i=0;i<6;i++){const k=i?ck[ri(0,6)]:'hp',t=tier();L.push({k,t,c:'c',pr:Math.round(MK[k].p[t]*(1+S.best*.06))})}
+ ['rev',R()<.5?'xpb':'chest'].forEach(k=>{const t=tier();L.push({k,t,c:'g',pr:MK[k].g[t]})});S.shop=L}
+function reroll(){if(S.gems<10)return;S.gems-=10;genShop();MSG='🔄 Pazar yenilendi!';render()}
+function buyM(i){const o=S.shop[i];if(o.sold)return;if(o.c=='c'){if(S.coins<o.pr)return;S.coins-=o.pr}else{if(S.gems<o.pr)return;S.gems-=o.pr}
+ o.sold=1;const k=o.k,t=o.t;
+ if(k=='box'||k=='chest'){const it=mkItem(S.best,0,k=='box'?t+1:(t?3:2));S.inv.push(it);MSG='🎁 '+RAR[it.r].n+' '+SETS[it.s].n+(it.t=='w'?' Kılıç':' Zırh')}
+ else if(k=='xpb'){const x=Math.round(need()*MK.xpb.v[t]);gain(x);MSG='✨ +'+x+' EXP'}
+ else{S.bag.push({k,t});MSG='🎒 Çantaya eklendi: '+MK[k].n}
+ save();render()}
+function fl(d){const n=S.floor+d;if(n>=1&&n<=S.best){S.floor=n;newFloor()}}
+function newFloor(){const b=S.floor%10==0;F={k:0,need:b?1:Math.min(3+S.floor,15)};E=null;cd=0;log(b?`☠️ Kat ${S.floor} — BOSS katı!`:`🚪 Kat ${S.floor} başladı.`);render2()}
+function spawn(){const f=S.floor,b=f%10==0,t=ri(0,2),sp=b?'boss':['slime','bat','skel'][t];
+ E={boss:b,sp,n:b?BN[(f/10-1)%4]:PF[Math.min(3,Math.floor(f/8))]+EN[t],mhp:Math.round((12+f*9*(1+f*.06))*(b?6:1)),atk:Math.round((3+f*1.8*(1+f*.02))*(b?1.6:1)),xp:Math.round((5+f*3)*(b?8:1)),co:Math.round((2+f*2)*(b?8:1)*(.8+R()*.4)),col:`hsl(${(f*37)%360},${sp=='skel'?15:60}%,${sp=='skel'?75:b?55:50}%)`};E.hp=E.mhp;log('👾 '+E.n+' belirdi!')}
+function hit(d,c,p){if(!E)return;E.hp-=d;anim.hl=1;anim.fl=1;fx.push({x:240,y:70,txt:(c?'💥':'')+d,col:c||p?'#fbbf24':'#fff',l:40});if(E.hp<=0)kill()}
+function power(){if(cd>0||!E)return;cd=6;hit(Math.round(atk()*3),true,true);log('💥 Güç Vuruşu!');render2()}
+function tick(){if(scene!='dungeon'||busy)return;if(cd>0)cd--;if(!E){spawn();render2();return}
+ const c=R()<crit();hit(Math.round(atk()*(.85+R()*.3)*(c?2:1)),c);
+ if(E){const d=Math.max(1,Math.round(E.atk*40/(40+def())*Math.max(.1,1-.05*S.sk[1]-bf('shd'))*(.85+R()*.3)));S.hp-=d;anim.el=1;fx.push({x:50,y:70,txt:'-'+d,col:'#ef4444',l:40});if(S.hp<=0){die();return}}render2()}
+function mkItem(f,b,mr){const x=R()+f*.004+(b?.2:0);let r=x>1.2?3:x>1?2:x>.7?1:0;r=Math.max(r,mr||0);const s=Math.min(2,Math.floor(R()*(1+f/12))),t=R()<.5?'w':'a',bs=t=='w'?SETS[s].wb:SETS[s].ab;return{id:S.nid++,t,s,r,p:Math.max(1,Math.round(bs*RAR[r].m*(.9+R()*.2))),u:0}}
+function kill(){const cm=1+.1*S.sk[2]+(S.own.pass?.25:0),co=Math.round(E.co*(cm+bf('gold'))),xp=Math.round(E.xp*(cm+bf('xp'))),f=S.floor,b=E.boss;
+ S.coins+=co;log(`✔ ${E.n}: +${co} altın +${xp} EXP`);if(b){S.gems+=3;log('💎 Boss ödülü: +3 elmas!')}
+ for(const k in S.buf)if(--S.buf[k].n<=0)delete S.buf[k];S.hp=Math.min(S.hp,maxhp());
+ E=null;F.k++;gain(xp);
+ if(R()<(b?1:.22)){const it=mkItem(f,b);S.inv.push(it);log('🎁 Düştü: '+nm(it))}
+ if(F.k>=F.need){log('🏁 Kat temizlendi!');if(S.floor==S.best)S.best++;if(S.auto&&has('auto'))S.floor=Math.min(S.floor+1,S.best);save();newFloor()}}
+function gain(x){S.xp+=x;while(S.xp>=need()){S.xp-=need();S.lv++;S.pts+=3;S.sp+=1;S.hp=maxhp();log('⭐ Seviye atladın! Sv '+S.lv+' (+3 stat, +1 yetenek)')}}
+function die(){let bi=-1,bt=-1;S.bag.forEach((x,i)=>{if(x.k=='rev'&&x.t>bt){bt=x.t;bi=i}});
+ if(bi>=0){S.bag.splice(bi,1);S.hp=Math.max(1,Math.round(maxhp()*MK.rev.v[bt]));log('✨ Diriliş Muskası seni geri getirdi!');E=null;render2();return}
+ S.coins=Math.floor(S.coins*.9);S.hp=1;S.buf={};MSG='💀 Zindanda düştün. Altınının %10’unu kaybettin. Dinlen veya iksir al!';go('town')}
+function spr(c,rows,pal,x,y,s){c.fillStyle='#07070c';rows.forEach((r,j)=>{for(let i=0;i<12;i++)if(r[i]!='.')c.fillRect(x+i*s-2,y+j*s-2,s+4,s+4)});
+ rows.forEach((r,j)=>{for(let i=0;i<12;i++){const k=r[i];if(k!='.'){c.fillStyle=pal[k];c.fillRect(x+i*s,y+j*s,s,s)}}})}
+function draw(){if(scene!='dungeon')return;const cv=$('#cv');if(!cv)return;const c=cv.getContext('2d'),t=performance.now()/1000;
+ c.fillStyle='#14161f';c.fillRect(0,0,320,180);c.fillStyle='#1d2030';const off=E?0:(t*60)%40;
+ for(let y=12;y<130;y+=30)for(let x=-40;x<340;x+=40)c.fillRect(x-off+(y%60?0:20),y,36,12);
+ c.fillStyle='#78350f';c.fillRect(157,36,6,18);c.fillStyle=Math.sin(t*14)>0?'#fbbf24':'#f97316';c.fillRect(156,26,8,10);
+ c.fillStyle='#2a2418';c.fillRect(0,140,320,40);c.fillStyle='#3b3220';c.fillRect(0,140,320,3);
+ const a=S.a&&itm(S.a),w=S.w&&itm(S.w);
+ c.fillStyle='#0007';c.beginPath();c.ellipse(62+anim.hl*18,143,34,5,0,0,7);c.fill();
+ spr(c,SP.hero,{H:'#cbd5e1',h:'#f5c9a0',k:'#1f2937',b:a?RAR[a.r].c:'#3b82f6',s:'#92400e',w:w?RAR[w.r].c:'#e5e7eb',g:'#fbbf24',l:'#4b5563'},26+anim.hl*18,68+Math.sin(t*(E?3:12))*2,6);
+ if(E){const s=E.boss?8:6,ew=12*s,ex=320-20-ew-anim.el*18,fy=E.sp=='bat'?18+Math.sin(t*5)*6:Math.sin(t*2)*2;
+  c.fillStyle='#0007';c.beginPath();c.ellipse(ex+ew/2,143,ew*.4,5,0,0,7);c.fill();
+  spr(c,SP[E.sp],{c:anim.fl>.3?'#fff':E.col,k:'#111',e:'#ef4444',w:'#fff'},ex,140-ew-fy,s);
+  c.fillStyle='#0009';c.fillRect(200,8,110,10);c.fillStyle='#ef4444';c.fillRect(200,8,110*Math.max(0,E.hp/E.mhp),10);c.fillStyle='#fff';c.font='10px monospace';c.fillText(E.n+' '+Math.max(0,E.hp),204,17)}
+ c.fillStyle='#0009';c.fillRect(10,8,110,10);c.fillStyle='#22c55e';c.fillRect(10,8,110*Math.max(0,S.hp/maxhp()),10);c.fillStyle='#fff';c.font='10px monospace';c.fillText('SEN HP '+Math.max(0,S.hp),14,17);
+ anim.hl*=.85;anim.el*=.85;anim.fl*=.85;c.font='bold 14px monospace';fx=fx.filter(f=>f.l>0);fx.forEach(f=>{c.fillStyle=f.col;c.fillText(f.txt,f.x,f.y);f.y-=.6;f.l--});
+ raf=requestAnimationFrame(draw)}
+render();
+</script></body></html>
